@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:jms="http://www.mulesoft.org/schema/mule/jms"
+	xmlns:compression="http://www.mulesoft.org/schema/mule/compression"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/compression http://www.mulesoft.org/schema/mule/compression/current/mule-compression.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<jms:config name="JMS_Config" doc:name="JMS Config" doc:id="14228dfc-380a-4f85-99dc-dd735c9a2080" >
+		<jms:active-mq-connection username="admin" password="admin" >
+			<jms:factory-configuration brokerUrl="tcp://localhost:61616" />
+		</jms:active-mq-connection>
+	</jms:config>
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="773bee91-faa6-493f-b31c-745da3560213" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<flow name="compressionFlow" doc:id="1bbcec47-20f5-405a-b4e1-28d8987f7ed3" >
+		<http:listener doc:name="Listener" doc:id="f4cf5f54-16fd-4869-8be3-0e4e42d9c4c5" config-ref="HTTP_Listener_config" path="/pub"/>
+		<set-payload value='#["this is compression"]' doc:name="Set Payload" doc:id="7c497760-d1ca-4805-b7bf-8c63311229fb" />
+		<compression:compress doc:name="Compress" doc:id="7f917f9f-558a-41c2-9233-9a9f2cce0c61" >
+			<compression:compressor >
+				<compression:zip-compressor />
+			</compression:compressor>
+		</compression:compress>
+		<jms:publish doc:name="Publish" doc:id="9a0f68fa-fac2-4c75-8e9c-8aa984184beb" config-ref="JMS_Config" destination="testqueue"/>
+	</flow>
+	<flow name="compressionFlow1" doc:id="b0372fd9-4b2f-4767-9455-ea082c030847" >
+		<http:listener doc:name="Listener" doc:id="cadf81af-28f3-4662-9efd-2f4951ecc1ca" config-ref="HTTP_Listener_config" path="/con"/>
+		<jms:consume doc:name="Consume" doc:id="0f744d2f-3e9f-4b26-99bd-a2ca62149fce" config-ref="JMS_Config" destination="testqueue">
+			<jms:consumer-type>
+				<jms:queue-consumer />
+			</jms:consumer-type>
+		</jms:consume>
+		<compression:decompress doc:name="Decompress" doc:id="4e87feea-a3a0-4c59-829a-1f76ae66dafc" >
+			<compression:decompressor >
+				<compression:zip-decompressor />
+			</compression:decompressor>
+		</compression:decompress>
+		<logger level="INFO" doc:name="Logger" doc:id="fc1efe36-1df0-41d4-b6d0-4f24989b74d5" message="#[payload]"/>
+	</flow>
+</mule>
